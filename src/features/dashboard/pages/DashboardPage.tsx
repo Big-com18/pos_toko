@@ -1,4 +1,4 @@
-import { AlertTriangle, Receipt, TrendingUp, Wallet } from 'lucide-react'
+import { AlertTriangle, PiggyBank, Receipt, Wallet } from 'lucide-react'
 import { useState } from 'react'
 
 import { Card } from '@/components/shared/Card'
@@ -29,6 +29,8 @@ function sumRange(rows: DailyReportRow[], from: string, to: string) {
   return {
     revenue: inRange.reduce((sum, r) => sum + r.total_revenue, 0),
     trx: inRange.reduce((sum, r) => sum + r.trx_count, 0),
+    profit: inRange.reduce((sum, r) => sum + r.total_profit, 0),
+    uncosted: inRange.reduce((sum, r) => sum + r.uncosted_revenue, 0),
   }
 }
 
@@ -56,9 +58,15 @@ export default function DashboardPage() {
   const rows = daily.data ?? []
   const cur = sumRange(rows, from, today)
   const prev = sumRange(rows, prevFrom, prevTo)
-  const average = cur.trx > 0 ? Math.round(cur.revenue / cur.trx) : 0
-  const prevAverage = prev.trx > 0 ? Math.round(prev.revenue / prev.trx) : 0
   const lowStock = (stock.data ?? []).filter((s) => s.is_low)
+
+  // keuntungan hanya dihitung dari barang yang modalnya sudah diisi
+  const costedRevenue = cur.revenue - cur.uncosted
+  const margin = costedRevenue > 0 ? Math.round((cur.profit / costedRevenue) * 100) : null
+
+  const todayRow = rows.find((r) => r.report_day === today)
+  const todayProfit =
+    todayRow && todayRow.total_revenue - todayRow.uncosted_revenue > 0 ? todayRow.total_profit : null
 
   const loading = daily.isPending || products.isPending || stock.isPending
   const error = daily.error ?? products.error ?? stock.error
@@ -97,20 +105,36 @@ export default function DashboardPage() {
               delta={change(cur.revenue, prev.revenue)}
               caption={cfg.vs}
             />
+            {costedRevenue > 0 ? (
+              <StatCard
+                icon={PiggyBank}
+                label="Keuntungan"
+                value={formatRupiah(cur.profit)}
+                tile="bg-violet-50 text-violet-600"
+                delta={change(cur.profit, prev.profit)}
+                caption={
+                  cur.uncosted > 0
+                    ? `${formatRupiah(cur.uncosted)} belum ada modal`
+                    : margin !== null
+                      ? `margin ${margin}%`
+                      : cfg.vs
+                }
+              />
+            ) : (
+              <StatCard
+                icon={PiggyBank}
+                label="Keuntungan"
+                value="Belum ada"
+                tile="bg-slate-100 text-slate-400"
+                caption="isi modal di Barang & Stok"
+              />
+            )}
             <StatCard
               icon={Receipt}
               label="Transaksi"
               value={String(cur.trx)}
               tile="bg-sky-50 text-sky-600"
               delta={change(cur.trx, prev.trx)}
-              caption={cfg.vs}
-            />
-            <StatCard
-              icon={TrendingUp}
-              label="Rata-rata per transaksi"
-              value={formatRupiah(average)}
-              tile="bg-violet-50 text-violet-600"
-              delta={change(average, prevAverage)}
               caption={cfg.vs}
             />
             <StatCard
@@ -127,7 +151,7 @@ export default function DashboardPage() {
               <h2 className="mb-4 font-bold">Pendapatan {chartDays} hari terakhir</h2>
               <RevenueChart rows={rows} to={today} days={chartDays} />
             </Card>
-            <TodayPanel today={today} />
+            <TodayPanel today={today} profit={todayProfit} />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">

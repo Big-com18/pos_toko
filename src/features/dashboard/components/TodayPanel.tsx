@@ -6,7 +6,13 @@ import { Loading } from '@/components/shared/States'
 import { useHistory } from '@/features/history/hooks/useHistory'
 import { formatJam, formatRupiah } from '@/lib/format'
 
-export function TodayPanel({ today }: { today: string }) {
+interface TodayPanelProps {
+  today: string
+  /** keuntungan hari ini; null = modal belum diisi */
+  profit: number | null
+}
+
+export function TodayPanel({ today, profit }: TodayPanelProps) {
   const { data, isPending } = useHistory(today)
 
   const valid = (data ?? []).filter((s) => !s.voided_at)
@@ -35,7 +41,17 @@ export function TodayPanel({ today }: { today: string }) {
       ) : (
         <>
           <p className="mt-3 text-3xl font-bold tabular-nums tracking-tight">{formatRupiah(revenue)}</p>
-          <p className="text-sm text-slate-500">{valid.length} transaksi</p>
+          <p className="text-sm text-slate-500">
+            {valid.length} transaksi
+            {profit !== null && (
+              <>
+                {' · '}
+                <span className={profit < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-700'}>
+                  untung {formatRupiah(profit)}
+                </span>
+              </>
+            )}
+          </p>
 
           {cashiers.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">

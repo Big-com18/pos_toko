@@ -8,9 +8,10 @@ import { Modal } from '@/components/shared/Modal'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState, ErrorState, Loading } from '@/components/shared/States'
 import { useToast } from '@/components/shared/toastContext'
-import type { ProductInput } from '@/features/products/api/productsApi'
+import type { CostInput, ProductInput } from '@/features/products/api/productsApi'
 import { ProductForm } from '@/features/products/components/ProductForm'
 import {
+  useProductCosts,
   useProducts,
   useSaveProduct,
   useToggleProduct,
@@ -20,7 +21,7 @@ import { MovementsDialog } from '@/features/stock/components/MovementsDialog'
 import { RestockDialog } from '@/features/stock/components/RestockDialog'
 import { useStock } from '@/features/stock/hooks/useStock'
 import { toMessage } from '@/lib/errors'
-import type { Product, StockRow } from '@/types/models'
+import type { Product, ProductCost, StockRow } from '@/types/models'
 
 import { InventoryItem } from '../components/InventoryItem'
 
@@ -29,6 +30,7 @@ type Filter = 'all' | 'low' | 'empty' | 'inactive'
 export default function InventoryPage() {
   const products = useProducts()
   const stock = useStock()
+  const costs = useProductCosts()
   const saveProduct = useSaveProduct()
   const toggleProduct = useToggleProduct()
   const { notify } = useToast()
@@ -43,6 +45,11 @@ export default function InventoryPage() {
   const stockMap = useMemo(
     () => new Map((stock.data ?? []).map((s) => [s.id, s] as [string, StockRow])),
     [stock.data],
+  )
+
+  const costMap = useMemo(
+    () => new Map((costs.data ?? []).map((c) => [c.product_id, c] as [string, ProductCost])),
+    [costs.data],
   )
 
   const counts = useMemo(() => {
@@ -78,12 +85,13 @@ export default function InventoryPage() {
       )
   }, [products.data, stockMap, filter, search])
 
-  async function handleSave(input: ProductInput, initialStock: number) {
+  async function handleSave(input: ProductInput, initialStock: number, cost: CostInput) {
     try {
       await saveProduct.mutateAsync({
         id: editing && editing !== 'new' ? editing.id : undefined,
         input,
         initialStock,
+        cost,
       })
       notify(editing === 'new' ? 'Barang ditambahkan' : 'Barang diperbarui')
       setEditing(null)
@@ -179,6 +187,7 @@ export default function InventoryPage() {
             <InventoryItem
               product={p}
               stock={stockMap.get(p.id)}
+              cost={costMap.get(p.id)}
               onEdit={setEditing}
               onToggle={handleToggle}
               onRestock={setRestockRow}
@@ -197,6 +206,7 @@ export default function InventoryPage() {
         {editing !== null && (
           <ProductForm
             initial={editing === 'new' ? undefined : editing}
+            initialCost={editing === 'new' ? undefined : costMap.get(editing.id)}
             submitting={saveProduct.isPending}
             onSubmit={handleSave}
             onCancel={() => setEditing(null)}

@@ -21,6 +21,7 @@ export const productSchema = z
     pack_price: z.string().trim(),
     min_stock: nonNegative('Isi angka 0 atau lebih'),
     initial_stock: z.string().trim(),
+    cost: z.string().trim(),
   })
   .superRefine((v, ctx) => {
     if (v.has_pack) {
@@ -34,6 +35,12 @@ export const productSchema = z
       const price = parseNumber(v.pack_price)
       if (!v.pack_price || !Number.isFinite(price) || price < 0) {
         ctx.addIssue({ code: 'custom', path: ['pack_price'], message: 'Isi harga satuan besar' })
+      }
+    }
+    if (v.cost) {
+      const c = parseNumber(v.cost)
+      if (!Number.isFinite(c) || c < 0) {
+        ctx.addIssue({ code: 'custom', path: ['cost'], message: 'Isi angka 0 atau lebih' })
       }
     }
     if (v.initial_stock) {

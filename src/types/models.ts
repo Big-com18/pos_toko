@@ -80,6 +80,10 @@ export interface DailyReportRow {
   report_day: string
   total_revenue: number
   trx_count: number
+  /** keuntungan dari barang yang modalnya sudah diisi */
+  total_profit: number
+  /** pendapatan dari barang yang modalnya belum diisi */
+  uncosted_revenue: number
 }
 
 export interface ProductReportRow {
@@ -87,6 +91,16 @@ export interface ProductReportRow {
   product_name: string
   qty_base: number
   revenue: number
+  /** null = modal barang ini belum pernah diisi */
+  profit: number | null
+}
+
+export interface ProductCost {
+  product_id: string
+  /** modal per satuan eceran */
+  cost_price: number
+  /** modal per satuan besar (sesuai yang diketik owner) */
+  cost_pack: number | null
 }
 
 export interface SignupCode {

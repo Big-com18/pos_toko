@@ -7,11 +7,12 @@ import { ProductAvatar } from '@/components/shared/ProductAvatar'
 import { Switch } from '@/components/shared/Switch'
 import { formatNumber, formatRupiah, formatStockPack } from '@/lib/format'
 import { packPrice } from '@/lib/pricing'
-import type { Product, StockRow } from '@/types/models'
+import type { Product, ProductCost, StockRow } from '@/types/models'
 
 interface InventoryItemProps {
   product: Product
   stock: StockRow | undefined
+  cost: ProductCost | undefined
   onEdit: (p: Product) => void
   onToggle: (p: Product, isActive: boolean) => void
   onRestock: (row: StockRow) => void
@@ -30,6 +31,7 @@ function level(row: StockRow) {
 export function InventoryItem({
   product: p,
   stock,
+  cost,
   onEdit,
   onToggle,
   onRestock,
@@ -38,6 +40,9 @@ export function InventoryItem({
 }: InventoryItemProps) {
   const pp = packPrice(p)
   const lv = stock ? level(stock) : null
+  const profitUnit = cost ? p.unit_price - cost.cost_price : null
+  const margin =
+    profitUnit !== null && p.unit_price > 0 ? Math.round((profitUnit / p.unit_price) * 100) : null
   const packText = stock ? formatStockPack(stock.stock, p.unit, p.pack_unit, p.pack_size) : ''
 
   return (
@@ -61,6 +66,21 @@ export function InventoryItem({
               </>
             )}
           </p>
+          {cost && profitUnit !== null ? (
+            <p className={`mt-1 text-xs ${profitUnit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+              Modal {formatRupiah(cost.cost_price)}/{p.unit} · {profitUnit < 0 ? 'rugi' : 'untung'}{' '}
+              {formatRupiah(Math.abs(profitUnit))}
+              {margin !== null ? ` (${margin}%)` : ''}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEdit(p)}
+              className="mt-1 text-xs text-slate-400 hover:text-emerald-700 hover:underline"
+            >
+              Isi modal untuk melihat untung
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" iconOnly aria-label={`Ubah ${p.name}`} onClick={() => onEdit(p)}>
