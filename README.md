@@ -1,78 +1,28 @@
-# React + TypeScript + Vite
+# Toko Stok - kode src
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Isi paket ini: folder `src/` (React + TypeScript + Supabase) dan `.env.example`.
 
-Currently, two official plugins are available:
+## Cara pasang
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Di project Vite kamu (template react-ts), hapus file bawaan: `src/App.tsx`, `src/App.css`, `src/assets/`.
+2. Salin folder `src/` dari zip ini ke project, timpa yang ada. Jangan timpa `src/index.css` (sudah berisi `@import "tailwindcss";` dari setup).
+   Kalau kamu pakai shadcn/ui, file `src/lib/utils.ts` dan `src/components/ui/*` miliknya tidak akan bentrok dengan kode ini.
+3. Salin `.env.example` jadi `.env.local`, isi URL dan anon key Supabase.
+4. Pastikan library ini sudah terpasang:
+   `npm install @supabase/supabase-js @tanstack/react-query react-router-dom zustand react-hook-form zod @hookform/resolvers`
+5. Pastikan alias `@` sudah dikonfigurasi (vite.config.ts dan tsconfig.app.json).
+6. Jalankan `npm run dev`, lalu login dengan user yang kamu buat di Supabase Auth.
 
-## React Compiler
+## Syarat database
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+SQL di PRD (bagian 10.1 dan 10.2) sudah dijalankan, termasuk fungsi `create_sale` dan RLS.
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+## Urutan coba
 
-## Expanding the ESLint configuration
+Barang -> tambah barang + paket jual -> Stok -> catat barang masuk -> Menu harian -> pilih barang -> Penjualan -> simpan transaksi -> Dashboard.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Catatan
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+- Client Supabase belum memakai tipe hasil generate. Kalau mau, jalankan `supabase gen types` lalu
+  tambahkan generic `createClient<Database>` di `src/lib/supabase.ts`.
+- Tabel dan view dibaca langsung dari komponen lewat layer `api/` + `hooks/` (komponen tidak memanggil Supabase langsung).
