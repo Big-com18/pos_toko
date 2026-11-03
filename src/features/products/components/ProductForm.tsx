@@ -4,20 +4,29 @@ import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/shared/Button'
 import { Field } from '@/components/shared/Field'
-import { formatRupiah, parseNumber } from '@/lib/format'
-import type { Product } from '@/types/models'
+import { formatNumber, formatRupiah, parseNumber } from '@/lib/format'
+import type { Product, ProductCost } from '@/types/models'
 
-import type { ProductInput } from '../api/productsApi'
+import type { CostInput, ProductInput } from '../api/productsApi'
 import { type ProductFormValues, productSchema } from '../schemas/productSchema'
 
 interface ProductFormProps {
   initial?: Product
+  initialCost?: ProductCost
   submitting: boolean
-  onSubmit: (input: ProductInput, initialStock: number) => void
+  onSubmit: (input: ProductInput, initialStock: number, cost: CostInput) => void
   onCancel: () => void
 }
 
-export function ProductForm({ initial, submitting, onSubmit, onCancel }: ProductFormProps) {
+function initialCostText(initial?: Product, cost?: ProductCost): string {
+  if (!initial || !cost) return ''
+  if (initial.pack_unit && initial.pack_size) {
+    return String(cost.cost_pack ?? Math.round(cost.cost_price * initial.pack_size))
+  }
+  return String(Math.round(cost.cost_price * 100) / 100)
+}
+
+export function ProductForm({ initial, initialCost, submitting, onSubmit, onCancel }: ProductFormProps) {
   const {
     register,
     handleSubmit,
@@ -37,25 +46,41 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
       pack_price: initial?.pack_price != null ? String(initial.pack_price) : '',
       min_stock: initial ? String(initial.min_stock) : '0',
       initial_stock: '',
+      cost: initialCostText(initial, initialCost),
     },
   })
 
   const hasPack = watch('has_pack')
   const unit = watch('unit') || 'satuan'
   const packUnit = watch('pack_unit') || 'pak'
-  const unitPrice = parseNumber(watch('unit_price') || '')
-  const packSize = parseNumber(watch('pack_size') || '')
-  const packPrice = parseNumber(watch('pack_price') || '')
+  const unitPriceText = watch('unit_price')
+  const packPriceText = watch('pack_price')
+  const costText = watch('cost')
 
-  const unitPriceOk = watch('unit_price') !== '' && Number.isFinite(unitPrice)
-  const canSuggest = hasPack && packSize > 0 && Number.isFinite(packPrice) && watch('pack_price') !== ''
+  const unitPrice = parseNumber(unitPriceText || '')
+  const packSize = parseNumber(watch('pack_size') || '')
+  const packPrice = parseNumber(packPriceText || '')
+  const costNum = parseNumber(costText || '')
+
+  const unitPriceOk = unitPriceText !== '' && Number.isFinite(unitPrice)
+  const packPriceOk = hasPack && packSize > 0 && packPriceText !== '' && Number.isFinite(packPrice)
+  const costOk = costText !== '' && Number.isFinite(costNum) && costNum >= 0
+
+  // modal per satuan eceran
+  const costPerUnit = !costOk ? null : hasPack ? (packSize > 0 ? costNum / packSize : null) : costNum
 
   function suggest() {
-    if (!canSuggest) return
+    if (!packPriceOk) return
     setValue('unit_price', String(Math.round(packPrice / packSize)), { shouldValidate: true })
   }
 
-  const submit = handleSubmit((v) =>
+  const submit = handleSubmit((v) => {
+    const raw = v.cost ? parseNumber(v.cost) : null
+    let cost: CostInput = null
+    if (raw !== null) {
+      const size = v.has_pack ? parseNumber(v.pack_size) : 1
+      cost = { cost_price: raw / size, cost_pack: v.has_pack ? raw : null }
+    }
     onSubmit(
       {
         name: v.name,
@@ -68,8 +93,15 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
         min_stock: parseNumber(v.min_stock),
       },
       initial || !v.initial_stock ? 0 : parseNumber(v.initial_stock),
-    ),
-  )
+      cost,
+    )
+  })
+
+  // ringkasan untung
+  const profitUnit = costPerUnit !== null && unitPriceOk ? unitPrice - costPerUnit : null
+  const marginUnit =
+    profitUnit !== null && unitPrice > 0 ? Math.round((profitUnit / unitPrice) * 100) : null
+  const profitPack = costOk && packPriceOk ? packPrice - costNum : null
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
@@ -86,7 +118,7 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
         <div className="grid grid-cols-2 gap-3">
           <Field label="Satuan" placeholder="pcs" error={errors.unit?.message} {...register('unit')} />
           <Field
-            label={`Harga per ${unit} (Rp)`}
+            label={`Harga jual per ${unit} (Rp)`}
             inputMode="decimal"
             placeholder="1000"
             error={errors.unit_price?.message}
@@ -123,30 +155,72 @@ export function ProductForm({ initial, submitting, onSubmit, onCancel }: Product
             />
           </div>
           <Field
-            label={`Harga per ${packUnit} (Rp)`}
+            label={`Harga jual per ${packUnit} (Rp)`}
             inputMode="decimal"
             placeholder="12000"
             error={errors.pack_price?.message}
             {...register('pack_price')}
           />
-          <Button variant="soft" size="sm" onClick={suggest} disabled={!canSuggest}>
+          <Button variant="soft" size="sm" onClick={suggest} disabled={!packPriceOk}>
             <Calculator className="h-4 w-4" />
-            Hitung harga per {unit} dari harga {packUnit}
+            Hitung harga jual per {unit} dari harga {packUnit}
           </Button>
         </div>
       )}
 
       {unitPriceOk && (
-        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
           Beli 1 {unit} = <strong>{formatRupiah(unitPrice)}</strong>, beli 2 {unit} ={' '}
           <strong>{formatRupiah(unitPrice * 2)}</strong>
-          {hasPack && packSize > 0 && Number.isFinite(packPrice) && watch('pack_price') !== '' && (
+          {packPriceOk && (
             <>
-              . Beli 1 {packUnit} (isi {packSize}) = <strong>{formatRupiah(packPrice)}</strong>
+              . Beli 1 {packUnit} (isi {formatNumber(packSize)}) = <strong>{formatRupiah(packPrice)}</strong>
             </>
           )}
         </p>
       )}
+
+      <div className="rounded-2xl border border-slate-200 p-4">
+        <p className="mb-1 text-sm font-semibold">Modal (harga beli)</p>
+        <p className="mb-3 text-xs text-slate-500">
+          Opsional. Diisi supaya keuntungan bisa dihitung. Hanya owner yang bisa melihat modal.
+        </p>
+        <Field
+          label={`Harga beli per ${hasPack ? packUnit : unit} (Rp)`}
+          inputMode="decimal"
+          placeholder={hasPack ? 'Contoh: 80000 untuk 1 dus' : 'Contoh: 600'}
+          error={errors.cost?.message}
+          {...register('cost')}
+        />
+
+        {costPerUnit !== null && (
+          <div
+            className={`mt-3 rounded-xl px-4 py-3 text-sm ${
+              profitUnit !== null && profitUnit < 0
+                ? 'bg-rose-50 text-rose-800'
+                : 'bg-emerald-50 text-emerald-800'
+            }`}
+          >
+            <p>
+              Modal per {unit}: <strong>{formatRupiah(costPerUnit)}</strong>
+            </p>
+            {profitUnit !== null && (
+              <p>
+                {profitUnit < 0 ? 'Rugi' : 'Untung'}{' '}
+                <strong>{formatRupiah(Math.abs(profitUnit))}</strong> per {unit}
+                {marginUnit !== null && <> (margin {marginUnit}%)</>}
+                {profitUnit < 0 && <> — harga jual di bawah modal!</>}
+              </p>
+            )}
+            {profitPack !== null && (
+              <p>
+                Per {packUnit}: {profitPack < 0 ? 'rugi' : 'untung'}{' '}
+                <strong>{formatRupiah(Math.abs(profitPack))}</strong>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field

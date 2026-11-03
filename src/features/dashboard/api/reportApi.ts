@@ -9,6 +9,8 @@ export const reportApi = {
       report_day: r.report_day,
       total_revenue: Number(r.total_revenue),
       trx_count: Number(r.trx_count),
+      total_profit: Number(r.total_profit ?? 0),
+      uncosted_revenue: Number(r.uncosted_revenue ?? 0),
     }))
   },
 
@@ -20,6 +22,7 @@ export const reportApi = {
       product_name: r.product_name,
       qty_base: Number(r.qty_base),
       revenue: Number(r.revenue),
+      profit: r.profit === null || r.profit === undefined ? null : Number(r.profit),
     }))
   },
 }

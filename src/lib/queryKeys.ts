@@ -1,6 +1,7 @@
 export const qk = {
   profile: (userId: string) => ['profile', userId] as const,
   products: ['products'] as const,
+  productCosts: ['product-costs'] as const,
   stock: ['stock'] as const,
   movements: (productId: string) => ['movements', productId] as const,
   history: (date: string) => ['history', date] as const,
