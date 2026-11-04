@@ -13,7 +13,7 @@ export interface ProductInput {
 }
 
 /** null = modal dikosongkan (barang tanpa modal) */
-export type CostInput = { cost_price: number; cost_pack: number | null } | null
+export type CostInput = { cost_price: number; cost_total: number; cost_qty: number } | null
 
 export const productsApi = {
   async list(): Promise<Product[]> {
@@ -26,12 +26,13 @@ export const productsApi = {
   async listCosts(): Promise<ProductCost[]> {
     const { data, error } = await supabase
       .from('product_costs')
-      .select('product_id, cost_price, cost_pack')
+      .select('product_id, cost_price, cost_total, cost_qty')
     if (error) throw error
     return ((data ?? []) as ProductCost[]).map((c) => ({
       product_id: c.product_id,
       cost_price: Number(c.cost_price),
-      cost_pack: c.cost_pack === null ? null : Number(c.cost_pack),
+      cost_total: c.cost_total === null ? null : Number(c.cost_total),
+      cost_qty: c.cost_qty === null ? null : Number(c.cost_qty),
     }))
   },
 
