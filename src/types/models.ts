@@ -104,3 +104,7 @@ export interface ProductCost {
   /** jumlah satuan eceran yang didapat dari pembelian itu, misal 12 */
   cost_qty: number | null
 }
+export interface SignupCode {
+  role: Role
+  code: string
+}
