@@ -97,13 +97,10 @@ export interface ProductReportRow {
 
 export interface ProductCost {
   product_id: string
-  /** modal per satuan eceran */
+  /** modal per satuan eceran (dihitung otomatis dari total harga beli / jumlah) */
   cost_price: number
-  /** modal per satuan besar (sesuai yang diketik owner) */
-  cost_pack: number | null
-}
-
-export interface SignupCode {
-  role: Role
-  code: string
+  /** total harga beli yang diketik owner, misal 80.000 */
+  cost_total: number | null
+  /** jumlah satuan eceran yang didapat dari pembelian itu, misal 12 */
+  cost_qty: number | null
 }
